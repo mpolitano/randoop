@@ -40,6 +40,16 @@ import randoop.util.MultiMap;
 import randoop.util.Randomness;
 import randoop.util.SimpleArrayList;
 import randoop.util.SimpleList;
+//MFIS.
+import randoop.redundancy.FEBuildersRedundancyStrategy;
+import randoop.redundancy.FERedundancyStrategy;
+import randoop.redundancy.FieldsRedundancyStrategy;
+import randoop.redundancy.NoRedudancyStrategy;
+import randoop.redundancy.RedudantObjectsStrategy;
+import randoop.redundancy.TWiseRedundancyStrategy;
+import randoop.reflection.OmitMethodsPredicate;
+import canonicalizer.BFHeapCanonicalizer;
+import canonicalizer.CanonicalizerConfig;
 
 /** Randoop's forward, component-based generator. */
 public class ForwardGenerator extends AbstractGenerator {
@@ -84,6 +94,10 @@ public class ForwardGenerator extends AbstractGenerator {
    * <p>Each value in the collection is a primitive wrapper or a String.
    */
   private Set<Object> runtimePrimitivesSeen = new LinkedHashSet<>();
+
+  private OmitMethodsPredicate buildersPred;
+
+  private RedudantObjectsStrategy redundancyStrategy;
 
   /**
    * Create a forward generator.
@@ -159,6 +173,53 @@ public class ForwardGenerator extends AbstractGenerator {
       default:
         throw new Error("Unhandled input_selection: " + GenInputsAbstract.input_selection);
     }
+
+    if (!GenInputsAbstract.builders.isEmpty() || GenInputsAbstract.builders_file != null) {
+      buildersPred = new OmitMethodsPredicate(GenInputsAbstract.builders);
+      System.out.println("\n----------");
+      System.out.println("Builders: \n");
+      for (TypedOperation op : operations) {
+        if (op instanceof TypedClassOperation) {
+          TypedClassOperation top = (TypedClassOperation) op;
+          if (buildersPred.shouldOmit(top))
+            System.out.println(top.getRawSignature().toString());
+
+        }
+      }
+      System.out.println("----------");
+    }
+
+    if (GenInputsAbstract.detection_fields || GenInputsAbstract.minimization_fields) {
+      System.out.println("\n----------");
+      System.out.println("Abstraction: \n");
+      System.out.println(GenInputsAbstract.abstraction);
+      System.out.println("\n----------");
+    }
+
+    redundancyStrategy = new NoRedudancyStrategy();
+    if (GenInputsAbstract.fe_redundancy) {
+      CanonicalizerConfig cfg = new CanonicalizerConfig();
+      cfg.setMaxObjects(GenInputsAbstract.fe_max_objects);
+      cfg.setMaxArrayValues(GenInputsAbstract.fe_max_array_values);
+      cfg.setIgnoreFields(GenInputsAbstract.fe_ignore_fields);
+      if(GenInputsAbstract.builders.isEmpty())
+        redundancyStrategy = new FERedundancyStrategy(new BFHeapCanonicalizer(cfg));
+      else
+        redundancyStrategy = new FEBuildersRedundancyStrategy(new BFHeapCanonicalizer(cfg));
+    } else if (GenInputsAbstract.t_wise_generation != null) {
+      CanonicalizerConfig cfg = new CanonicalizerConfig();
+      cfg.setMaxObjects(GenInputsAbstract.t_wise_max_objects);
+      cfg.setMaxArrayValues(GenInputsAbstract.t_wise_max_array_values);
+      cfg.setIgnoreFields(GenInputsAbstract.t_wise_ignore_fields);
+      redundancyStrategy = new TWiseRedundancyStrategy(new BFHeapCanonicalizer(cfg),
+              GenInputsAbstract.t_wise_generation);
+    } else if (GenInputsAbstract.detection_fields || GenInputsAbstract.minimization_fields) {
+      CanonicalizerConfig cfg = new CanonicalizerConfig();
+      cfg.setMaxObjects(GenInputsAbstract.max_objects);
+      cfg.setMaxArrayValues(GenInputsAbstract.max_array_values);
+      redundancyStrategy = new FieldsRedundancyStrategy(new BFHeapCanonicalizer(cfg));
+    }
+
   }
 
   /**
@@ -230,6 +291,20 @@ public class ForwardGenerator extends AbstractGenerator {
 
     long gentime1 = System.nanoTime() - startTime;
 
+    // check if the sequences is builder. Before execute
+    if (!GenInputsAbstract.builders.isEmpty() || GenInputsAbstract.builders_file != null) {
+      TypedOperation op = eSeq.sequence.getOperation();
+      if (op instanceof TypedClassOperation) {
+        TypedClassOperation top = (TypedClassOperation) op;
+        if (buildersPred.shouldOmit(top)) {
+          buildersSeq++;
+          eSeq.isBuilder = true;
+        }else {
+          noBuildersSeq++;
+        }
+      }
+    }
+
     // Useful for debugging non-terminating sequences.
     // System.out.printf("step() is considering: %n%s%n%n", eSeq.sequence);
 
@@ -238,6 +313,17 @@ public class ForwardGenerator extends AbstractGenerator {
     startTime = System.nanoTime(); // reset start time.
 
     determineActiveIndices(eSeq);
+
+    if (GenInputsAbstract.detection_fields && eSeq.redundant)
+      countRedundant++;
+
+    if (eSeq.outScope)
+      return null;
+
+    if (!GenInputsAbstract.builders.isEmpty() || GenInputsAbstract.builders_file != null) {
+      if(!eSeq.isBuilder)
+        eSeq.sequence.clearAllActiveFlags();
+    }
 
     if (eSeq.sequence.hasActiveFlags()) {
       componentManager.addGeneratedSequence(eSeq.sequence);
@@ -388,6 +474,7 @@ public class ForwardGenerator extends AbstractGenerator {
         Log.logPrintf("Making index " + i + " active.%n");
       }
     }
+    redundancyStrategy.clearRedundantObjectsIndices(seq);
   }
 
   /**

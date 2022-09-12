@@ -7,6 +7,9 @@ import randoop.Globals;
 import randoop.condition.RandoopSpecificationError;
 import randoop.generation.AbstractGenerator;
 import randoop.sequence.Sequence;
+//MFIS
+import java.time.Duration;
+import java.time.Instant;
 
 /**
  * Main entry point for Randoop. Asks the command handlers who can handle the command given by the
@@ -28,7 +31,10 @@ public class Main {
   public static void main(String[] args) {
 
     Main main = new Main();
+    Instant start = Instant.now();
     main.nonStaticMain(args);
+    Instant finish = Instant.now();
+    System.out.println("Generation time: " + Duration.between(start, finish).getSeconds() + " s");
     System.exit(0);
   }
 

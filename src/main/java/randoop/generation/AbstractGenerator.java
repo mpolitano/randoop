@@ -24,6 +24,8 @@ import randoop.util.ProgressDisplay;
 import randoop.util.ReflectionExecutor;
 import randoop.util.predicate.AlwaysFalse;
 
+//MFIS.
+import randoop.MethodClassifierVisitor;
 /**
  * Algorithm template for implementing a test generator.
  *
@@ -70,6 +72,15 @@ public abstract class AbstractGenerator {
 
   /** Sequences that are used in other sequences (and are thus redundant) */
   protected Set<Sequence> subsumed_sequences = new LinkedHashSet<>();
+
+  /** Number of test redundant */
+  public int countRedundant = 0;
+
+  /** Number of builders sequence */
+  public int buildersSeq = 0;
+
+  /** Number of no builders sequence */
+  public int noBuildersSeq = 0;
 
   /**
    * Elapsed time since the generator started.
@@ -376,8 +387,23 @@ public abstract class AbstractGenerator {
       progressDisplay.display(!GenInputsAbstract.deterministic);
       progressDisplay.shouldStop = true;
     }
+    //Mariano
+    if (GenInputsAbstract.operations_log != null)
+      ((MethodClassifierVisitor)executionVisitor).writeToLogFile();
 
     if (GenInputsAbstract.progressdisplay) {
+      //MFIS.
+      if(GenInputsAbstract.detection_fields || !GenInputsAbstract.builders.isEmpty() || GenInputsAbstract.builders_file != null ) {
+        System.out.println();
+        System.out.println("sequencesFields:" + numGeneratedSequences());
+        System.out.println();
+        System.out.println("redudant.test:" + countRedundant);
+        System.out.println();
+        System.out.println("builders.seq:" + buildersSeq);
+        System.out.println();
+        System.out.println("no.builders.seq:" + noBuildersSeq);
+
+        }
       System.out.println();
       System.out.println("Normal method executions: " + ReflectionExecutor.normalExecs());
       System.out.println("Exceptional method executions: " + ReflectionExecutor.excepExecs());

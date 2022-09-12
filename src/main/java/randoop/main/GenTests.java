@@ -103,7 +103,10 @@ import randoop.util.RandoopLoggingError;
 import randoop.util.ReflectionExecutor;
 import randoop.util.SimpleList;
 import randoop.util.predicate.AlwaysFalse;
-
+//MFIS
+import randoop.MethodClassifierVisitor;
+import randoop.PrintObjectsVisitor;
+import randoop.util.OperationsLog;
 /** Test generation. */
 public class GenTests extends GenInputsAbstract {
 
@@ -253,6 +256,12 @@ public class GenTests extends GenInputsAbstract {
     // Get names of classes that must be covered by output tests
     Set<@ClassGetName String> coveredClassnames =
         GenInputsAbstract.getClassNamesFromFile(require_covered_classes);
+
+    // MFIS
+    List<Pattern> builders =
+            GenInputsAbstract.getBuildersNamesFromFile(GenInputsAbstract.builders_file);
+    for (Pattern b: builders)
+      GenInputsAbstract.builders.add(b);
 
     // Get names of fields to be omitted
     Set<String> omitFields = GenInputsAbstract.getStringSetFromFile(omit_field_file, "fields");
@@ -495,6 +504,14 @@ public class GenTests extends GenInputsAbstract {
         }
       }
     }
+
+    //MFIS.
+    if (GenInputsAbstract.minimization_fields)
+      visitors.add(new PrintObjectsVisitor());
+
+    if (GenInputsAbstract.operations_log != null)
+      visitors.add(new MethodClassifierVisitor(operations));
+
     explorer.setExecutionVisitor(visitors);
 
     // Diagnostic output

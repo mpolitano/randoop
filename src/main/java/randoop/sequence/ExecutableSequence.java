@@ -104,6 +104,16 @@ public class ExecutableSequence {
   /** The subsequences that were concatenated to create this sequence. */
   public List<Sequence> componentSequences = Collections.emptyList();
 
+  //MFIS.
+  /** Used to know redundancy. */
+  public boolean redundant = false;
+
+  /** out scope in canonicalize?. */
+  public boolean outScope = false;
+
+  /** sequences is builder?. */
+  public boolean isBuilder = false;
+
   /**
    * Create an executable sequence that executes the given sequence.
    *
@@ -460,7 +470,8 @@ public class ExecutableSequence {
    * @return the result of executing the index-th element of the sequence, if that element's
    *     execution completed normally
    */
-  private Object getValue(int index) {
+  //MFIS. Is private original
+  public Object getValue(int index) {
     ExecutionOutcome result = getResult(index);
     if (result instanceof NormalExecution) {
       return ((NormalExecution) result).getRuntimeValue();

@@ -31,6 +31,9 @@ import randoop.reflection.AccessibilityPredicate;
 import randoop.util.Randomness;
 import randoop.util.ReflectionExecutor;
 
+//MFIS
+import representations.TWise;
+
 /** Container for Randoop options. They are stored as static variables, not instance variables. */
 @SuppressWarnings("WeakerAccess")
 public abstract class GenInputsAbstract extends CommandHandler {
@@ -296,6 +299,67 @@ public abstract class GenInputsAbstract extends CommandHandler {
    */
   @Option("Number of suspected nondeterministic methods to print")
   public static int nondeterministic_methods_to_output = 10;
+
+
+
+  @OptionGroup("TWise generation criteria")
+  @Option("Enable t-wise generation. Should be set to FIELDS, PAIRS or TUPLES")
+  public static TWise t_wise_generation = null;
+  @Option("Discard sequences that generate objects containing more objects (of any class) than this number")
+  public static int t_wise_max_objects = Integer.MAX_VALUE;
+  @Option("Discard sequences that generate objects containing arrays with more non-null values than this number")
+  public static int t_wise_max_array_values = Integer.MAX_VALUE;
+  @Option("Ignore these fields for t-wise generation")
+  public static Pattern t_wise_ignore_fields = null;
+
+  @OptionGroup("Field extensions based redundancy criteria")
+  @Option("Enable field extensions based redundancy criteria")
+  public static boolean fe_redundancy = false;
+  @Option("Discard sequences that generate objects containing more objects (of any class) than this number")
+  public static int fe_max_objects = Integer.MAX_VALUE;
+  @Option("Discard sequences that generate objects containing arrays with more non-null values than this number")
+  public static int fe_max_array_values = Integer.MAX_VALUE;
+  @Option("Ignore these fields for fe redundancy strategy")
+  public static Pattern fe_ignore_fields = null;
+  @Option("Do not use the object constructor during generation")
+  public static boolean disable_object_constructor = false;
+  @Option("Do not use default randoop contracts checking")
+  public static boolean disable_contracts = false;
+  @Option("Set to false to disable default randoop array creation heuristic")
+  public static boolean array_creation_heuristic = true;
+  @Option("Set to false to disable default randoop collection creation heuristic")
+  public static boolean collection_creation_heuristic = true;
+
+
+  //MFIS.
+  @OptionGroup("Learning Abstraction Function or Detection Relevant Fields ")
+  @Option("Enable minimization of test suite through fields relevant")
+  public static boolean minimization_fields = false;
+  @Option("Enable detection fields relevant")
+  public static boolean detection_fields = false;
+  @Option("Enable abstraction fields function for state matching in generation")
+  public static String abstraction = null;
+  @Option("Ignore these fields for field values")
+  public static Pattern ignore_fields = null;
+  @Option("Discard sequences that generate objects containing more objects (of any class) than this number")
+  public static int max_objects =  Integer.MAX_VALUE;
+  @Option("Discard sequences that generate objects containing arrays with more non-null values than this number")
+  public static int max_array_values =  Integer.MAX_VALUE;
+
+
+  @Option("Only call methods that match regular expression <string> for builders")
+  public static List<Pattern> builders = new ArrayList<>();
+
+  @Option("Only call methods that match with methods in a file buildersFile")
+  public static Path builders_file = null;
+
+
+  @Option("<filename> Make Randoop save operation signatures to this file and terminate")
+  public static FileWriterWithName operations_log = null;
+
+  @Option("<filename> Make Randoop save operation signatures for match wit JaCoCO into this file")
+  public static FileWriterWithName coverage_operations_log = null;
+
 
   /**
    * Whether to output error-revealing tests. Disables all output when used with {@code
@@ -1075,6 +1139,20 @@ public abstract class GenInputsAbstract extends CommandHandler {
     }
 
     return classnames;
+  }
+
+  //MFIS
+  public static List<Pattern> getBuildersNamesFromFile(Path file) {
+    List<Pattern> result = new ArrayList<>();
+    for (String line : getStringSetFromFile(file, "builders names")) {
+//	      if (!Signatures.isClassGetName(line)) {
+//	        throw new RandoopUsageError(
+//	            "Illegal value \"" + line + "\" in " + file + ", should be a method name");
+//	      }
+
+      result.add(Pattern.compile(line));
+    }
+    return result;
   }
 
   /**
